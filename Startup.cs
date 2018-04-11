@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using EduwardPost.AzureAd.K8s.Auth.SideCar.Extensions;
+using EduwardPost.AzureAd.K8s.Auth.SideCar.Middleware;
+using EduwardPost.AzureAd.K8s.Auth.SideCar.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
@@ -22,8 +25,7 @@ namespace EduwardPost.AzureAd.K8s.Auth.SideCar {
         public void ConfigureServices(IServiceCollection services) {
             services.AddAuthentication(sharedOptions => {
                     sharedOptions.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
-                })
-                .AddAzureAdBearer(options => Configuration.Bind("AzureAd", options));
+                }).AddAzureAdBearer(options => Configuration.Bind("AzureAd", options));
         }
 
         
@@ -34,9 +36,15 @@ namespace EduwardPost.AzureAd.K8s.Auth.SideCar {
                 app.UseDeveloperExceptionPage();
             }
 
-            app.Run(async(context) => {
-                await context.Response.WriteAsync("Hello World!");
+               app.UseAuthentication();
+
+            app.Use(async (context, next) =>
+            {
+                await context.AuthenticateAsync();
+                await next.Invoke();
             });
+
+            app.UseAuthenticatedProxy(new AuthenticatedProxyOptions {});
         }
     }
 }
